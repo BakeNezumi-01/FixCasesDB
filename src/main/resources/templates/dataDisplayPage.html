@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DataDisplayPage</title>
+</head>
+
+<body>
+    <form th:action="@{/data}" method="get">
+        <div><input type="submit" value="Показать все"/></div>
+    </form>
+    <br/>
+    <br/>
+    <form th:action="@{/data/top3Reasons}" method="get">
+        <div><input type="submit" value="Топ 3 причины"/></div>
+    </form>
+    <br/>
+    <br/>
+    <form th:action="@{/data/top3Times}" method="get">
+        <div><input type="submit" value="Показать ТОП 3 времени ремонта"/></div>
+    </form>
+    <br/>
+    <br/>
+    <form th:action="@{/data/repeatedReasons}" method="get">
+        <div><input type="submit" value="Показать повторные ремонты"/></div>
+    </form>
+
+    <div class="wrapper" >
+        <div ><h3>CASE ID</h3></div>
+        <div ><h3>ATM ID</h3></div>
+        <div ><h3>Название управляющей причины</h3></div>
+        <div ><h3>Начало</h3></div>
+        <div ><h3>Окончание</h3></div>
+        <div ><h3>Серийный номер</h3></div>
+        <div ><h3>BANK_NM</h3></div>
+        <div ><h3>Канал связи</h3></div>
+    </div>
+    <div th:each="case : ${cases}">
+        <div class="wrapper" >
+            <div th:text="${case.caseId}">Zero</div>
+            <div th:text="${case.amtId}">One</div>
+            <div th:text="${case.reasonName}">Two</div>
+            <div th:text="${#dates.format(case.problemStartTime, 'dd-MM-yyyy HH:mm')}">Three</div>
+            <div th:text="${#dates.format(case.problemEndTime, 'dd-MM-yyyy HH:mm')}">Four</div>
+            <div th:text="${case.serialNumber}">Five</div>
+            <div th:text="${case.bankName}">Six</div>
+            <div th:text="${case.link}">Seven</div>
+        </div>
+    </div>
+</body>
+<style>
+    .wrapper {
+        display: grid;
+        grid-template-columns: 1fr 1fr 2fr 1fr 1fr 1fr 1fr 1fr;
+    }
+</style>
+</html>

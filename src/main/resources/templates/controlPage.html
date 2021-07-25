@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<!-- Thymeleaf Namespace -->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>ControlPage</title>
+</head>
+
+<body>
+    <form th:action="@{/upload}" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" >
+        <div><input type="submit" value="Загрузить данные"/></div>
+        <div><h5 th:text= "${rowsAmount}"/></div>
+    </form>
+    <br/>
+    <br/>
+    <form th:action="@{/data/}" method="get">
+        <div><input type="submit" value="Отобразить данные"/></div>
+    </form>
+    <br/>
+    <br/>
+    <form th:action="@{/delete}" method="get">
+        <div><input type="submit" value="Удалить данные"/></div>
+        <div><h5 th:text="${rowsDeleted}"> кря </h5></div>
+    </form>
+</body>
+</html>
