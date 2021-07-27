@@ -12,43 +12,49 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Repository
 public interface FixCaseRepository extends JpaRepository<FixCase, Long> {
     LinkedList<Long> addedFixCaseId = new LinkedList<>();
 
-    FixCase findByCaseId(Long id);
     void deleteById(long id);
 
-    @Query(
-            value = "SELECT * FROM FIX_CASE \n" +
-                    "ORDER BY PROBLEM_START_TIME - PROBLEM_END_TIME \n" +
-                    "LIMIT 3",
-            nativeQuery = true)
-    List<FixCase> top3Times();
+    default List<FixCase> top3Times(){
+        Comparator<FixCase> dateDiffComparator = Comparator.comparingLong(x ->
+                (x.getProblemStartTime().getTime() - x.getProblemEndTime().getTime()));
 
-    @Query(
-            value = "select * from FIX_CASE \n" +
-                    "where REASON_NAME in (SELECT REASON_NAME FROM FIX_CASE \n" +
-                    "                      GROUP BY REASON_NAME \n" +
-                    "                      ORDER BY COUNT(*) DESC\n" +
-                    "                      limit 3)\n" +
-                    "order by REASON_NAME desc;",
-            nativeQuery = true)
-    List<FixCase> top3Reasons();
+        return findAll().stream()
+                .sorted(dateDiffComparator)
+                .limit(3)
+                .collect(Collectors.toList());
+    }
 
-    @Query(
-            value = "select *  from FIX_CASE a\n" +
-                    "where exists(select * from FIX_CASE b\n" +
-                                "where a.REASON_NAME = b.REASON_NAME \n" +
-                                "and datediff(day, a.PROBLEM_START_TIME , b.PROBLEM_START_TIME) <= 15\n" +
-                                "and datediff(day, a.PROBLEM_START_TIME , b.PROBLEM_START_TIME) > 0)\n" +
-                    "order by REASON_NAME, PROBLEM_START_TIME ",
-            nativeQuery = true)
-    List<FixCase> repeatedReasons();
+    default List<FixCase> top3Reasons(){
+        return findAll().stream()
+                .collect( Collectors.groupingBy(FixCase::getReasonName, Collectors.counting()))
+                .entrySet().stream()
+                .sorted( Map.Entry.<String, Long>comparingByValue().reversed())
+                .limit(3)
+                .map(Map.Entry::getKey)
+                .flatMap(reasonName ->  findAll().stream()
+                            .filter( x -> reasonName.equals(x.getReasonName())))
+                .collect( Collectors.toList());
+    }
+
+    default List<FixCase> repeatedReasons(){
+        List<FixCase> casesList = findAll().stream()
+                .collect( Collectors.groupingBy(FixCase::getReasonName))
+                .entrySet().stream()
+                .filter(entry -> entry.getValue().size() > 1)
+                .flatMap(entry -> entry.getValue().stream()
+                        .sorted(Comparator.comparing(FixCase::getProblemStartTime)))
+                .collect(Collectors.toList());
+        //хотелось бы [.filter((x,y) -> (x.getTime - y.getTime).toDays < 15)], но печаль
+        return deleteOutOf15Days(casesList);
+
+    }
 
     default int deleteAdded(){
         int count = addedFixCaseId.size();
@@ -112,6 +118,24 @@ public interface FixCaseRepository extends JpaRepository<FixCase, Long> {
         fos.write(file.getBytes());
         fos.close();
         return convFile;
+    }
+
+    default List<FixCase> deleteOutOf15Days(List<FixCase> casesList){
+        Set<FixCase> in15Days = new HashSet<>();
+
+        FixCase currentFC = casesList.get(0);
+        for( int i = 1; i < casesList.size(); i++){
+            if(currentFC.getReasonName().equals(casesList.get(i).getReasonName()) &&
+                    ((currentFC.getProblemStartTime().getTime())
+                            - (casesList.get(i).getProblemStartTime().getTime()))/(1000*60*60*24) < 15){
+                in15Days.add(currentFC);
+                in15Days.add(casesList.get(i));
+            }
+            currentFC = casesList.get(i);
+        }
+        return in15Days.stream().sorted(Comparator.comparing(FixCase::getReasonName)
+                                        .thenComparing(FixCase::getProblemStartTime))
+                .collect(Collectors.toList());
     }
 
 }
